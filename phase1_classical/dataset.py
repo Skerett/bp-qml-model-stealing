@@ -45,10 +45,10 @@ def getDataLoaders(batch_size=64):
     trainLoader = DataLoader(trainDataset, batch_size, shuffle=True)
     testLoader = DataLoader(testDataset, batch_size, shuffle=False)
 
-    return trainLoader, testLoader
+    return trainLoader, testLoader, pca
 
 if __name__ == "__main__":
-    trainLoader, testLoader = getDataLoaders()
+    trainLoader, testLoader, pca = getDataLoaders()
     trainBatch_x, trainBatch_y = next(iter(trainLoader))
     testBatch_x, testBatch_y = next(iter(testLoader))
     print(f"TrainLoader:")
