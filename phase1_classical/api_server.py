@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 import joblib
 from phase1_classical import model as myModel
+from phase1_classical.common import ApiMode
 import torch
 
 # Class for correct data check
@@ -26,7 +27,7 @@ model.eval()
 
 # Endpoints
 @app.post("/predict")
-def predict(request: PredictRequest, mode: str = "confidence_score"):
+def predict(request: PredictRequest, mode: ApiMode = ApiMode.CONFIDENCE_SCORE):
     # Flatten image to numpy array (1, 28x28)
     imageArray = np.array(request.image, dtype=np.float32).reshape(1, -1)
 
@@ -45,17 +46,16 @@ def predict(request: PredictRequest, mode: str = "confidence_score"):
         output = model(imageTensor)
         probabilites = torch.softmax(output, dim=1)[0]
 
-    if mode == "hard_label":
+    if mode == ApiMode.HARD_LABEL:
         prediction = int(torch.argmax(probabilites).item())
         return {"prediction": prediction}
-    elif mode == "rounded":
+    elif mode == ApiMode.ROUNDED:
         rounded = [round(p,2) for p in probabilites.tolist()]
         return {"prediction": rounded}
-    elif mode == "noisy":
+    elif mode == ApiMode.NOISY:
         noise = np.random.normal(0, 0.05, size=4)
         noisy_probs = np.clip(probabilites.numpy() + noise, 0, 1)
         noisy_probs = noisy_probs / noisy_probs.sum()
         return {"prediction": noisy_probs.tolist()}
-    else:
+    elif mode == ApiMode.CONFIDENCE_SCORE:
         return {"prediction": probabilites.tolist()}
-    

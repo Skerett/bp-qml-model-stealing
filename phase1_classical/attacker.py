@@ -3,11 +3,12 @@ import torch
 import requests
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
+from common import ApiMode
 
 # Constants
 API_URL = "http://localhost:8000/predict"
 QUERY_BUDGET = 2000
-API_MODE = "confidence_score"
+API_MODE = ApiMode.CONFIDENCE_SCORE
 trainSize = int(QUERY_BUDGET * 0.8)
 
 # Surrogate model
@@ -37,14 +38,15 @@ stolenAnswers = []
 # Sending requests to victim
 for image in queryImages:
     imgFlatten = image.float().flatten().tolist()
-    response = session.post(f"{API_URL}?mode={API_MODE}", json={"image": imgFlatten})
+    response = session.post(f"{API_URL}?mode={API_MODE.value}", json={"image": imgFlatten})
     prediction = response.json()["prediction"]
     stolenImages.append(imgFlatten)
     stolenAnswers.append(prediction)
 
 # Transforming to tensor
+target_dtype = torch.long if API_MODE == ApiMode.HARD_LABEL else torch.float32
 stolenImages = torch.tensor(stolenImages, dtype=torch.float32)
-stolenAnswers = torch.tensor(stolenAnswers, dtype=torch.float32)
+stolenAnswers = torch.tensor(stolenAnswers, dtype=target_dtype)
 
 # Normalise images
 stolenImagesNorm = stolenImages.float() / 255.0
@@ -102,7 +104,7 @@ for epoch in range(epochs):
             predictions = torch.argmax(outputs, dim=1)
 
             # Victim prediction
-            victimPrediction = torch.argmax(batch_y, dim=1)
+            victimPrediction = torch.argmax(batch_y, dim=1) if batch_y.dim() > 1 else batch_y
             
             # Verification of results
             correct += (predictions == victimPrediction).sum().item()
